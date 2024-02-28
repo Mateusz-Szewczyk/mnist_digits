@@ -2,11 +2,11 @@ import mnist
 import numpy as np
 from scipy.special import expit
 
-X_test = mnist.test_images().astype(np.float16) / 255
-y_test = mnist.test_labels().astype(np.float16) / 255
+X_test = mnist.test_images().astype(np.float16)
+y_test = mnist.test_labels().astype(np.float16)
 
-X_train = mnist.train_images().astype(np.float16) / 255
-y_train = mnist.train_labels().astype(np.float16) / 255
+X_train = mnist.train_images().astype(np.float16)
+y_train = mnist.train_labels().astype(np.float16)
 
 
 def vectorized(labels) -> np.array:
@@ -105,7 +105,7 @@ class NeuralNetwork:
 
 def main():
     net = NeuralNetwork([784, 100, 10])
-    net.SGD(training_data[:9000], 50, 30, 3.0, test_data=test_data)
+    net.SGD(training_data, 50, 30, 0.001, test_data=test_data)
 
 
 if __name__ == "__main__":
