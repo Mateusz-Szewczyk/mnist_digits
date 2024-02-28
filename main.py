@@ -2,11 +2,11 @@ import mnist
 import numpy as np
 from scipy.special import expit
 
-X_test = mnist.test_images().astype(np.float32)
-y_test = mnist.test_labels().astype(np.float32)
+X_test = mnist.test_images().astype(np.float16) / 255
+y_test = mnist.test_labels().astype(np.float16) / 255
 
-X_train = mnist.train_images().astype(np.float32)
-y_train = mnist.train_labels().astype(np.float32)
+X_train = mnist.train_images().astype(np.float16) / 255
+y_train = mnist.train_labels().astype(np.float16) / 255
 
 
 def vectorized(labels) -> np.array:
@@ -25,9 +25,6 @@ def squeezed(data) -> np.array:
 training_data = [[X, y] for X, y in zip(squeezed(X_train), vectorized(y_train))]
 test_data = [[X, y] for X, y in zip(squeezed(X_test), vectorized(y_test))]
 
-print(squeezed(X_train)[0].shape)
-print(vectorized(y_train)[0].shape)
-
 
 def sigmoid(z):
     return expit(z)
@@ -38,11 +35,12 @@ def sigmoid_prime(z):
 
 
 class NeuralNetwork:
-    def __init__(self, sizes):
+    def __init__(self, sizes, lmbda=0.1):
         self.sizes = sizes
         self.num_layers = len(sizes)
-        self.biases = [np.random.rand(y, 1) for y in sizes[1:]]
-        self.weights = [np.random.rand(y, x) for x, y in zip(sizes[:-1], sizes[1:])]
+        self.lmbda = lmbda
+        self.biases = [np.random.randn(y, 1) / np.sqrt(y) for y in sizes[1:]]
+        self.weights = [np.random.randn(y, x) / np.sqrt(x) for x, y in zip(sizes[:-1], sizes[1:])]
 
     def feedforward(self, a):
         for b, w in zip(self.biases, self.weights):
@@ -70,7 +68,8 @@ class NeuralNetwork:
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [w - (eta / len(mini_batch)) * nw for w, nw in zip(self.weights, nabla_w)]
+        self.weights = [(1 - eta * self.lmbda / len(mini_batch)) * w - (eta / len(mini_batch)) * nw for w, nw in
+                        zip(self.weights, nabla_w)]
         self.biases = [b - (eta / len(mini_batch)) * nb for b, nb in zip(self.biases, nabla_b)]
 
     def backprop(self, x, y):
@@ -86,13 +85,13 @@ class NeuralNetwork:
             activations.append(activation)
         delta = self.cost_derivative(activations[-1], y) * sigmoid_prime(zs[-1])
         nabla_b[-1] = delta
-        nabla_w[-1] = np.dot(delta, activations[-2].transpose())
+        nabla_w[-1] = np.dot(delta, activations[-2].T)
         for l in range(2, self.num_layers):
             z = zs[-l]
             sp = sigmoid_prime(z)
             delta = np.dot(self.weights[-l + 1].transpose(), delta) * sp
             nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
+            nabla_w[-l] = np.dot(delta, activations[-l - 1].T)
         return nabla_b, nabla_w
 
     def evaluate(self, test_data):
@@ -103,9 +102,10 @@ class NeuralNetwork:
         return output_activations - y
 
 
+
 def main():
-    net = NeuralNetwork([784, 30, 10])
-    net.SGD(training_data, 30, 10, 1.0, test_data=test_data)
+    net = NeuralNetwork([784, 100, 10])
+    net.SGD(training_data[:9000], 50, 30, 3.0, test_data=test_data)
 
 
 if __name__ == "__main__":
